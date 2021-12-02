@@ -1,0 +1,66 @@
+---
+title: 'Primera sesión'
+output:
+  html_document:
+    df_print: paged
+---
+
+<div align="right">Elaborado por Chiara Zamora </div>
+<a id='home'></a>
+
+Veremos:
+
+1. [Importación de datos desde la web](### Importación de datos desde la web)
+2. [Limpieza de datos](#plot)
+3. [Preprocesamiento de datos](#bib).
+4. [Estadística univariada](#bib).
+
+### **1. Importación de datos desde la web**
+
+##### a. [Centros de vacunación](https://www.datosabiertos.gob.pe/dataset/centros-de-vacunacion)
+```{r}
+library(rio)
+
+centros = import("https://cloud.minsa.gob.pe/s/96XbzfYBCGcwtp7/download")
+```
+
+##### b. [Ubigeos](https://www.datosabiertos.gob.pe/dataset/codigos-equivalentes-de-ubigeo-del-peru)
+```{r}
+ubigeos = import("https://cloud.minsa.gob.pe/s/GkfcJD8xKHJeCqn/download")
+```
+
+##### c. [Población de provincias](https://es.wikipedia.org/wiki/Anexo:Provincias_del_Per%C3%BA)
+```{r}
+library(htmltab)
+
+poblacion = htmltab("https://es.wikipedia.org/wiki/Anexo:Provincias_del_Per%C3%BA",
+                    which= "/html/body/div[3]/div[3]/div[5]/div[1]/table")
+```
+
+### **2. Limpieza de datos**
+
+##### a. Centros de vacunación
+```{r}
+head(centros)
+```
+
+##### b. Ubigeos
+```{r}
+head(ubigeos)
+```
+
+##### c. Población de provincias
+```{r}
+library(stringr)
+
+# alternativa 1
+poblacion$Poblacion= gsub('Â[[:space:]]',"",poblacion[,4])
+
+# alternativa 2
+poblacion$Poblacion = gsub("[^0-9.-]", "", poblacion[,4])
+```
+
+### **3. Preprocesamiento de datos**
+
+### **4. Estadística univariada**
+
