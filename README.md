@@ -1,6 +1,6 @@
 # Taller de Estadística aplicada en R en Ciencias Sociales
 
-#### Diciembre, 2021
+#### Marzo, 2022
 
 Aquí encontrarán los códigos empleados en las tres sesiones del taller.
 
