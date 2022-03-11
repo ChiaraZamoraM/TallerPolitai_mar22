@@ -10,49 +10,163 @@ output:
 
 Veremos:
 
-1. [Importación de datos desde la web](### Importación de datos desde la web)
-2. [Limpieza de datos](#plot)
-3. [Preprocesamiento de datos](#bib).
-4. [Estadística univariada](#bib).
+1. [Importación de datos desde la web](### **1. Importación de datos desde la web**)
+2. [Exploración y limpieza de datos](### **2. Limpieza de datos**)
+3. [Preprocesamiento de datos](### **3. Preprocesamiento de datos**).
+4. [Estadística univariada](### **4. Estadística univariada**).
 
 ### **1. Importación de datos desde la web**
 
-##### a. [Centros de vacunación](https://www.datosabiertos.gob.pe/dataset/centros-de-vacunacion)
+Existen multiples paquetes con funciones que permiten la importacion de datos desde diversas fuentes de informacion. Sin embargo, en esta clase vamos a hacer uso de los paquetes **rio** y **htmltab** para la importacion desde la web.
+
+Algunos tipos de datos son:
+* Datos en formato texto:
+- CSV: .csv
+
+* Formatos de otros softwares propietario
+- EXCEL: .xls y .xlsx
+- SPSS: .sav  
+- STATA: .dta
+- SAS: .sas
+
+* Otros formatos
+- JSON (JavaScript Object Notation)
+- XML
+
+##### a. [Fallecidos por COVID-19](https://www.datosabiertos.gob.pe/dataset/fallecidos-por-covid-19-ministerio-de-salud-minsa)
 ```{r}
 library(rio)
 
-centros = import("https://cloud.minsa.gob.pe/s/96XbzfYBCGcwtp7/download")
+fallecidos = import("https://cloud.minsa.gob.pe/s/xJ2LQ3QyRW38Pe5/download")
 ```
 
-##### b. [Ubigeos](https://www.datosabiertos.gob.pe/dataset/codigos-equivalentes-de-ubigeo-del-peru)
-```{r}
-ubigeos = import("https://cloud.minsa.gob.pe/s/GkfcJD8xKHJeCqn/download")
-```
-
-##### c. [Población de provincias](https://es.wikipedia.org/wiki/Anexo:Provincias_del_Per%C3%BA)
+##### b. [Población de provincias](https://es.wikipedia.org/wiki/Anexo:Provincias_del_Per%C3%BA)
 ```{r}
 library(htmltab)
 
 poblacion = htmltab("https://es.wikipedia.org/wiki/Anexo:Provincias_del_Per%C3%BA",
-                    which= "/html/body/div[3]/div[3]/div[5]/div[1]/table")
+                    which= "/html/body/div[3]/div[3]/div[5]/div[1]/table[1]")
 ```
 
-### **2. Limpieza de datos**
+---
 
-##### a. Centros de vacunación
+### **2. Exploración y limpieza de datos**
+
+##### a. Fallecidos por COVID-19
+
+* Revisamos la base: 
+
+- ¿Qué variables contiene?
+
 ```{r}
-head(centros)
+names(fallecidos)
 ```
 
-##### b. Ubigeos
+- ¿Qué contiene cada variable?
+
 ```{r}
-head(ubigeos)
+str(fallecidos)
 ```
 
-##### c. Población de provincias
+- ¿Cómo se ve la base?
+
 ```{r}
+head(fallecidos,10)
+```
+
+```{r}
+tail(fallecidos)
+```
+
+* Caracteres extraños
+
+```{r}
+table(fallecidos$CLASIFICACION_DEF)
+```
+
+- Identificar y reemplazar caracteres 
+
+```{r}
+# OjO con el orden!
+
 library(stringr)
 
+fallecidos$CLASIFICACION_DEF= gsub('ÃƒÂ³',"o",fallecidos$CLASIFICACION_DEF)
+
+fallecidos$CLASIFICACION_DEF= gsub('ÃƒÂ',"i",fallecidos$CLASIFICACION_DEF)
+```
+
+- ¿Se reemplazaron correctamente?
+
+```{r}
+table(fallecidos$CLASIFICACION_DEF)
+```
+
+* Reemplazar caracteres en múltiples columnas
+
+```{r}
+nm1 <- c("PROVINCIA", "DISTRITO") 
+
+fallecidos[nm1] <- lapply(fallecidos[nm1], gsub, pattern = "ÃƒÂ‘", replacement = "N")
+```
+
+* Cambio tipo y formato de variable a fecha 
+
+```{r}
+str(fallecidos$FECHA_FALLECIMIENTO)
+
+fallecidos$FECHA_FALLECIMIENTO=as.Date(as.character(fallecidos$FECHA_FALLECIMIENTO),
+                                    format = "%Y%m%d")
+```
+
+##### b. Población de provincias
+
+* Revisamos la base: 
+
+- ¿Qué variables contiene?
+
+```{r}
+names(poblacion)
+```
+- Reemplazar nombre de variable
+
+```{r}
+colnames(poblacion)[4]= "poblacion"
+```
+
+- ¿Qué contiene cada variable?
+
+```{r}
+str(poblacion)
+```
+
+- ¿Cómo se ve la base?
+
+```{r}
+head(poblacion)
+```
+
+```{r}
+tail(poblacion)
+```
+
+* Caracteres extraños
+
+- Cambiar el tipo de variable: de caracter a numérica
+
+```{r}
+poblacion$poblacionNum =  as.numeric(poblacion$poblacion)
+```
+
+- ¿Cambió correctamente? No!
+
+```{r}
+head(poblacion)
+```
+
+- Reemplazar caracteres extraños
+
+```{r}
 # alternativa 1
 poblacion$Poblacion= gsub('Â[[:space:]]',"",poblacion[,4])
 
@@ -60,7 +174,232 @@ poblacion$Poblacion= gsub('Â[[:space:]]',"",poblacion[,4])
 poblacion$Poblacion = gsub("[^0-9.-]", "", poblacion[,4])
 ```
 
+
+Otros ejemplos para el uso de **expresiones regulares** en R:
+[Strings](https://r4ds.had.co.nz/strings.html)
+[Regular expressions](https://stringr.tidyverse.org/articles/regular-expressions.html)
+
+"Son una herramienta concisa y flexible para describir patrones en cadenas".
+
+- Cambiar el tipo de variable: de caracter a numérica
+
+```{r}
+poblacion$poblacionNum =  as.numeric(poblacion$Poblacion)
+```
+
+- ¿Cambió correctamente? Sí!
+
+```{r}
+head(poblacion)
+```
+
+- Eliminamos las variables que ya no nos son útiles
+
+```{r}
+poblacion <- poblacion[-c(4,7)]
+```
+
+---
+
 ### **3. Preprocesamiento de datos**
+
+##### a. Fallecidos por COVID-19
+
+* Creación de variable a partir de los digitos de otra
+
+```{r}
+head(fallecidos)
+```
+
+```{r}
+fallecidos$ubigeo_prov = substr(fallecidos$UBIGEO, start = 1 , stop = 4) 
+```
+
+* Agregar fallecidos por provincia
+
+```{r}
+fallecidosProv=aggregate(UUID ~ ubigeo_prov , #Por qué UUID?
+                         data = fallecidos, 
+                         FUN=length)
+
+fallecidosDep=aggregate(UUID ~  DEPARTAMENTO , #Por qué UUID?
+                         data = fallecidos, 
+                         FUN=length)
+```
+
+O...
+
+```{r}
+library(tidyverse)
+
+fallecidosProv=fallecidos %>%
+  group_by(ubigeo_prov) %>%
+  summarise(conteo= length(UUID)) 
+```
+
+- ¿Cómo se ve la nueva base?
+
+```{r}
+head(fallecidosProv)
+```
+
+* Renombrar columna
+
+```{r}
+colnames(fallecidosProv)[2] = "Conteo"
+```
+
+##### b. Población de provincias
+
+* **Tasa de fallecidos** 
+
+```{r}
+names(fallecidos)
+```
+
+```{r}
+names(poblacion)
+```
+
+```{r}
+Base = merge(fallecidosProv, poblacion, by.x = "ubigeo_prov", by.y= "Ubigeo")
+```
+
+```{r}
+head(Base)
+```
+
+- Cálculo por 10 mil habitantes
+
+```{r}
+Base$Tasa = Base$Conteo*10000/Base$poblacionNum
+```
+
+---
 
 ### **4. Estadística univariada**
 
+Son varias las funciones que sirven para obtener estadística univariada, su uso también dependerá del tipo de variable. 
+
+##### a. Estadísticos de resumen de toda la base de datos
+
+```{r}
+summary(Base)
+```
+
+##### b. Estadísticos de resumen para variables nominales
+
+* Tabla de frecuencias
+
+```{r}
+table(fallecidos$DEPARTAMENTO)
+```
+
+```{r}
+table(fallecidos$SEXO)
+
+porfecha = as.data.frame(table(fallecidos$FECHA_FALLECIMIENTO))
+```
+
+* Frecuencias relativas
+
+```{r}
+prop.table(table(fallecidos$SEXO))
+```
+
+```{r}
+library(ggplot2)
+
+p <- fallecidos %>% 
+    select(SEXO) %>% 
+    drop_na() %>% 
+    ggplot(aes(x = SEXO))
+
+p + geom_bar(fill = "darkblue") +
+    xlab("Sexo del fallecido") +
+    ylab("Frecuencia")
+```
+
+```{r}
+d <- fallecidos %>% 
+    select(DEPARTAMENTO) %>% 
+    drop_na() %>% 
+    ggplot(aes(x = DEPARTAMENTO))
+
+d + geom_bar(fill = "darkblue") +
+    xlab("Departamento del fallecido") +
+    ylab("Frecuencia")
+```
+
+* Moda
+
+```{r}
+names(which.max(table(fallecidos$DEPARTAMENTO)))
+```
+
+##### c. Estadísticos de resumen para variables ordinales
+
+* mean(x, na.rm = FALSE)    Media aritmética
+
+* sd(x)                     Desviación estándar muestral
+
+* var(x)                    Varianza muestral
+
+* median(x)                 Median
+
+* quantile(x)               Cuartil de x 
+
+* min(x)                    Minimum value of x
+
+* max(x)                    Maximum value of x
+
+* range(x)         
+
+##### d. Estadísticos de resumen para variables numéricas
+
+```{r}
+library(RcmdrMisc)
+
+numSummary(Base$Conteo)
+```
+
+```{r}
+names(Base)
+```
+
+```{r}
+numSummary(Base[c(2,6,7)], 
+           statistics = c("mean", "sd", "se(mean)", "skewness", 
+                          "kurtosis", "quantiles"), 
+           quantiles = c(.25,.90))
+```
+
+```{r}
+p1 <- Base %>% 
+    select(Tasa) %>%
+    drop_na() %>% 
+    ggplot(aes(x = Tasa))
+
+p1 + geom_histogram(binwidth = 0.5, 
+                   position = "identity",
+                   alpha = 0.5) +
+    xlab("Tasa")+
+    ylab("Frecuencia")
+```
+
+```{r}
+names(Base)
+```
+
+```{r}
+library(psych)
+
+describe(Base[c(2,6,7)])
+```
+
+
+### Actividad: 
+
+* Reemplazar caracteres extraños en las variables "Departamento", "Provincia" y "Distrito" de la base **poblacion**.
+* Cambiar tipo y formato de variable de "FECHA_CORTE" de la base **fallecidos**.
+* Tabla que contenga la agregación de fallecidos por fecha.

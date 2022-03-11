@@ -1,0 +1,138 @@
+
+```{r}
+library(readxl)
+
+poblacion <- read_excel("C:/Users/soyma/Documents/GitHub/ERM_2022/deaths/Matriz_2020.xlsx",
+                        sheet = 3,
+                        skip = 8)
+
+poblacion = poblacion[c(2,6)]
+```
+
+```{r}
+library(rio)
+
+fallecidos <- import("https://cloud.minsa.gob.pe/s/xJ2LQ3QyRW38Pe5/download")
+
+fallecidos = subset(fallecidos, FECHA_FALLECIMIENTO <= 20220227) 
+```
+
+```{r}
+fallecidos $ubigeo_prov = substr(fallecidosDist$UBIGEO, 1, 4) 
+```
+
+```{r}
+fallecidosProv=aggregate(UUID~ubigeo_prov, data=fallecidos ,FUN=length)
+#UUID
+```
+
+```{r}
+poblacion$ubigeo_prov = substr(poblacion$Ubigeo, 1, 4)  
+```
+
+```{r}
+BaseFallecidosProv= merge(fallecidosProv,poblacion, by="ubigeo_prov")
+```
+
+```{r}
+colnames(BaseFallecidosProv)[4] = "poblacion"
+BaseFallecidosProv$Tasa = BaseFallecidosProv$FECHA_CORTE* 1000/BaseFallecidosProv$poblacion
+
+#UUID
+```
+
+```{r}
+library(sf)
+library(ggplot2)
+mapaP = st_read("C:/Users/soyma/Documents/GitHub/ERM_2022/PROVINCIAS.shp") #cambiar según directorio
+```
+
+```{r}
+mapaprov = merge(mapaP, BaseFallecidosProv, by.x= "IDPROV", by.y="ubigeo_prov")
+```
+
+```{r}
+baseProv = ggplot(data = mapaprov) + theme_light()
+```
+
+```{r}
+library(viridis)
+mapaFallecidos = baseProv +
+  geom_sf(aes(fill= cut(Tasa, breaks = c(-Inf, 2, 4, 6, 8, Inf))), size = 0.005) + labs(fill = "Tasa")+ 
+  scale_fill_viridis(discrete = TRUE, option= "rocket", direction = -1 ) #+
+  #ggtitle("Tasa de fallecidos a nivel provincial por cada mil habitantes")
+
+
+mapaFallecidos
+```
+
+```{r}
+ggsave("mapaFallecidos2.png")
+```
+```{r}
+ggsave("mapaFallecidos.eps")
+```
+
+```{r}
+ggsave("mapaFallecidos.svg")
+```
+
+```{r}
+write.csv(BaseFallecidosProv,"BaseFallecidosProv2702.csv")
+```
+```{r}
+write.csv(head(mapaprov[order(mapaprov$Tasa, decreasing = TRUE),],10), "Base2702.csv")
+```
+
+
+```{r}
+sum(BaseFallecidosProv$FECHA_CORTE)/sum(BaseFallecidosProv$poblacion)*1000
+```
+
+```{r}
+BaseFallecidosProv$Categorias = cut(BaseFallecidosProv$Tasa, breaks = 5)
+```
+
+```{r}
+summary(BaseFallecidosProv$Categorias)
+```
+
+```{r}
+BaseFallecidosProv$provincia_inei= as.numeric(BaseFallecidosProv$ubigeo_prov)
+```
+
+```{r}
+try1= merge(BaseFallecidosProv,BaseProv,by="provincia_inei")
+```
+
+```{r}
+cor.test(try1$Tasa,try1$Avance)
+```
+
+```{r}
+ggplot(try1,aes(x=Tasa, y=Avance))+
+  geom_point()+
+  geom_smooth(method=lm, colour= "darkred", se= FALSE)+
+  theme_light()+
+  xlab("Tasa de fallecidos por mil habitantes")+
+  ylab("Vacunación completa en mayores de edad (%)")
+```
+
+```{r}
+ggsave("plot1.png",width = 6, height = 4)
+```
+
+```{r}
+library(lubridate)
+
+fallecidos$FECHA_FALLECIMIENTO1 <- ymd(fallecidos$FECHA_FALLECIMIENTO)
+
+summary(fallecidos$FECHA_FALLECIMIENTO1)
+```
+
+```{r}
+hist(fallecidos$FECHA_FALLECIMIENTO1)
+```
+
+
+
