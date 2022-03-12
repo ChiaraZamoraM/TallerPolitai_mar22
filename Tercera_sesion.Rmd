@@ -1,0 +1,265 @@
+---
+title: "Tercera sesión"
+output:
+  html_document:
+    df_print: paged
+---
+
+<div align="right">Elaborado por Chiara Zamora </div>
+<a id='home'></a>
+
+Veremos:
+
+**Regresión lineal simple**
+
+1. [Limpieza y preprocesamiento](### **1. Limpieza y preprocesamiento**)
+
+2. [Introducción](### **2. Introducción**)
+
+3. [Visualización bivariada](### **3. Visualización bivariada**).
+
+4. [Correlación](### **4. Correlación**).
+
+5. [Regresión lineal simple](### **5. Regresión lineal simple**).
+
+6. [Introducción a los supuestos del modelo lineal](### **6. Introducción a los supuestos del modelo lineal**).
+
+---
+
+### **1. Limpieza y preprocesamiento**
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(RcmdrMisc)
+```
+
+```{r}
+url <- "https://github.com/ChiaraZamoraM/TallerPolitai_mar22/raw/main/Matriz_2020.xlsx"
+destfile <- "Matriz_2020.xlsx"
+curl::curl_download(url, destfile)
+matriz_indicadores <- read_excel(destfile,
+                                 sheet = 4,
+                                 skip = 8)
+
+colnames(matriz_indicadores)[c(30,40)] = c("Desnutricion_cronica", "Pobreza_total")
+
+provincias = subset(matriz_indicadores, matriz_indicadores[1] == "Provincia")
+
+indicadores = provincias %>%
+ select(Desnutricion_cronica, Pobreza_total)
+```
+
+```{r}
+str(indicadores)
+```
+
+```{r}
+indicadores = as.data.frame(sapply(indicadores, as.numeric))
+```
+
+```{r}
+numSummary(indicadores)
+```
+
+---
+
+### **2. Introducción**
+
+Al PPT.
+
+---
+
+### **3. Visualización bivariada**
+
+* **Diagramas de dispersión**
+
+```{r}
+indicadores %>%
+    ggplot(aes(Pobreza_total, Desnutricion_cronica)) +
+    geom_point() +
+    theme_minimal() +
+    labs(title = "Relación entre la pobreza total y la desnutrición crónica en infantes")
+```
+
+```{r}
+indicadores %>%
+    ggplot(aes(Pobreza_total, Desnutricion_cronica)) +
+    geom_point() +
+    theme_minimal() +
+    labs(title = "Relación entre la pobreza total y la desnutrición crónica en infantes")+
+    geom_smooth(method = "lm", se = F)
+```
+
+* **Gráfico de caja y bigotes** 
+
+En general, cualquier punto de datos que se encuentre fuera del rango intercuartílico * 1,5 (1.5*IQR) se considera un valor atípico. El IQR se calcula como la distancia entre los valores del percentil 25 y el percentil 75 para esa variable.
+
+```{r}
+par(mfrow=c(1, 2))  
+
+boxplot(indicadores$Pobreza_total, 
+        main="Pobreza total", 
+        sub=paste("Outlier rows: ", 
+                  boxplot.stats(indicadores$Pobreza_total)$out)) 
+
+boxplot(indicadores$Desnutricion_cronica, 
+        main="Desnutrición crónica", 
+        sub=paste("Outlier rows: ", 
+                  boxplot.stats(indicadores$Desnutricion_cronica)$out))
+```
+
+* **Gráfico de densidad**
+
+¿La variable de respuesta está cerca de la normalidad?
+
+```{r}
+library(e1071)
+par(mfrow=c(1, 2))  
+
+plot(density(indicadores$Desnutricion_cronica), 
+     main="Density Plot: Desnutricion_cronica", 
+     ylab="Frequency", 
+     sub=paste("Skewness:", 
+               round(e1071::skewness(indicadores$Desnutricion_cronica), 2)))  # density plot for 'Desnutricion_cronica'
+
+polygon(density(indicadores$Desnutricion_cronica), col="red")
+
+plot(density(indicadores$Pobreza_total), 
+     main="Density Plot: Distance", 
+     ylab="Frequency", 
+     sub=paste("Skewness:", round(e1071::skewness(indicadores$Pobreza_total), 2)))  # density plot for 'Pobreza_total'
+
+polygon(density(indicadores$Pobreza_total), col="red")
+```
+
+```{r}
+indicadores %>%
+    select(Pobreza_total, Desnutricion_cronica) %>% 
+    cor 
+```
+
+Recordar: 
+- H0: No existe correlación entre las variables
+- H1: Sí existe correlación entre las variables
+
+```{r}
+cor.test(indicadores$Pobreza_total,indicadores$Desnutricion_cronica)
+```
+
+* Determinar el p-value: ¿aceptar o rechazar la H0? 
+
+- Rechazas la H0/Aceptas la H1 -> p < 0.05
+
+- Aceptas la H0/Rechazas la H1 -> p > 0.05
+
+---
+
+### **5. Regresión lineal simple**
+
+```{r}
+linearMod <- lm(Desnutricion_cronica ~ Pobreza_total, 
+                data = indicadores)  # build linear regression model on full data
+
+print(linearMod)
+```
+
+```{r}
+summary(linearMod)
+```
+
+* **p-value**: Comprobación de la significación estadística
+
+t−Statistic= (β−coefficient)/Std.Error
+
+* **R-Cuadrado y Adj R-Cuadrado**
+
+* **AIC and BIC**
+
+```{r}
+AIC(linearMod)  
+BIC(linearMod)
+```
+
+
+* **¿Cómo saber si el modelo tiene el mejor ajuste para tu data?**
+
+Al PPT.
+
+---
+
+### **6. Introducción a los supuestos del modelo lineal**
+
+"Construir un modelo de regresión lineal es solo la mitad del trabajo. Para ser realmente utilizable en la práctica, el modelo debe ajustarse a los supuestos de la regresión lineal" [Assumptions of Linear Regression] (http://r-statistics.co/Assumptions-of-Linear-Regression.html).
+
+**Bonus**: El modelo de regresión es lineal en parámetros
+
+Un ejemplo de ecuación modelo que es lineal en parámetros
+
+**Y=a+(β1*X1)+(β2*X2^2)**
+
+Aunque, el X2 se eleva a la potencia 2, la ecuación sigue siendo lineal en los parámetros beta. Por lo que la suposición se cumple en este caso.
+
+##### **Supuesto a**: La media de los residuos es 0 - o cercana a 0.
+
+La diferencia entre el valor observado de la variable dependiente (y) y el valor predicho (ŷ) se denomina residuo (e). Cada punto de datos tiene un residuo.
+
+Se espera que el promedio de los residuos sea cercano a 0.
+
+```{r}
+mod <- lm(Desnutricion_cronica ~ Pobreza_total, 
+          data = indicadores)
+
+mean(mod$residuals)
+```
+
+##### **Supuesto b**: Homocedasticidad de los residuos o varianza igual.
+
+Las gráficas superior izquierda e inferior izquierda muestran cómo varían los residuos a medida que aumentan los valores ajustados. Lo que queremos es ver puntos aleatorios distribuidos a lo largo del plano.
+
+La homocedasticidad, es una característica de un modelo de regresión lineal que implica que los la varianza de los errores es constante. Este término, que es lo contrario de heterocedasticidad, se emplea para nombrar la propiedad de algunos modelos de regresión lineal en los que los errores de estimación son constantes a lo largo de las observaciones. Una varianza constante permite disponer de modelos más fiables.
+
+Los valores influyentes con casos en nuestra data que no siguen el patrón general del resto de casos. No todos los valores atípicos influyen en el análisis de regresión. Aunque nuestros datos tengan valores extremos, es posible que no sean influyentes para determinar una línea de regresión. Eso significa que los resultados no serían muy diferentes si los incluyéramos o los excluyéramos del análisis.
+
+El gráfico para identificar influyentes es Residual vs. Leverage. En este gráfico, los patrones no son relevantes. Debemos buscar los casos identificados en el gráfico.
+
+```{r}
+par(mfrow=c(2,2))
+    
+plot(mod)
+```
+
+##### **Supuesto c**: Baja correlación entre variables independientes (Xs) y residuos.
+
+Si existe correlación entre las variables independientes y los residuos podría ser indicación de que una variable explicativa ha sido omitida del modelo. Queremos que el p-value sea cercano a 1.
+
+```{r}
+for (var in indicadores){
+  var= as.numeric(var)
+  corr=cor.test(mod$residuals,var)
+  print(corr$p.value)
+}
+```
+
+##### **Supuesto d**: Normalidad de los residuos
+
+Si el p-value de la prueba de Shapiro-Wilk es menor a 0.05 entonces NO hay normalidad.
+
+Si la distribución de los residuos no parece seguir el modelo de probabilidad normal, los resultados del análisis deben ser interpretados con cuidado.
+
+```{r}
+shapiro.test(mod$residuals)
+```
+
+* **Comprobar los supuestos automáticamente**
+
+```{r}
+par(mfrow=c(2,2))  # draw 4 plots in same window
+
+mod <- lm(Pobreza_total ~ Desnutricion_cronica, data=indicadores)
+
+library(gvlma)
+
+gvlma::gvlma(mod)
+```
+

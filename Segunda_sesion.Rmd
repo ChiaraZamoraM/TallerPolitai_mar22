@@ -1,0 +1,445 @@
+---
+title: "Segunda sesión"
+output:
+  html_document:
+    df_print: paged
+---
+
+<div align="right">Elaborado por Chiara Zamora </div>
+<a id='home'></a>
+
+Veremos:
+
+**Estadística Bivariada**
+
+* [Limpieza y preprocesamiento](* **Limpieza y preprocesamiento**)
+
+1. [De una variable continua respecto a una categórica](### **1. De una variable continua respecto a una categórica**)
+
+2. [De una variable continua respecto a otra continua](### **2. De una variable continua respecto a otra continua**).
+
+3. [De una variable categórica respecto a una categórica](### **3. De una variable categórica respecto a una categórica**).
+
+4. [Comparaciones de medias](### **4. Comparaciones de medias**).
+
+###  **Limpieza y preprocesamiento**
+
+```{r}
+library(readxl)
+url <- "https://github.com/ChiaraZamoraM/TallerPolitai_mar22/raw/main/Matriz_2020.xlsx"
+destfile <- "Matriz_2020.xlsx"
+curl::curl_download(url, destfile)
+matriz_indicadores <- read_excel(destfile,
+                                 sheet = 3,
+                                 skip = 8)
+```
+
+```{r}
+head(matriz_indicadores)
+```
+
+```{r}
+tail(matriz_indicadores)
+```
+
+```{r}
+matriz_indicadores$ubigeo_prov = substr(matriz_indicadores$Ubigeo, 1, 4)
+```
+
+```{r}
+names(matriz_indicadores)
+```
+
+```{r}
+colnames(matriz_indicadores)[c(6,29,39)] = c("Poblacion_2020", "IVIA","IDH")
+```
+
+```{r}
+matriz_indicadores_backup = matriz_indicadores
+
+matriz_indicadores = matriz_indicadores[c(6,29,39,49)]
+```
+
+```{r}
+str(matriz_indicadores$IVIA)
+```
+
+```{r}
+matriz_indicadores$IDH= as.numeric(matriz_indicadores$IDH)
+matriz_indicadores$IVIA= as.numeric(matriz_indicadores$IVIA)
+```
+
+```{r}
+#summary(matriz_indicadores$IDH)
+#summary(matriz_indicadores$IDH)
+# o
+library(psych)
+library(RcmdrMisc)
+
+numSummary(matriz_indicadores[c(2,3)])
+
+describe(matriz_indicadores[c(2,3)])
+```
+
+```{r}
+library(tidyverse)
+
+matriz_indicadores$Niveles_IDH = cut(matriz_indicadores$IDH, breaks = 5)
+
+
+matriz_indicadores$Niveles_IVIA = cut(matriz_indicadores$IVIA, breaks = 5)
+```
+
+```{r}
+table(matriz_indicadores$Niveles_IDH)
+```
+
+```{r}
+table(matriz_indicadores$Niveles_IDH, matriz_indicadores$Niveles_IVIA)
+```
+
+```{r}
+prop.table(table(matriz_indicadores$Niveles_IDH, matriz_indicadores$Niveles_IVIA),
+           margin =  1)*100
+```
+
+
+```{r}
+matriz_indicadores$Niveles_IDH = factor(matriz_indicadores$Niveles_IDH,
+                                        labels = c("Bajo_IDH","Medio bajo", "Medio",
+                                                   "Medio alto", "Alto"))
+
+matriz_indicadores$Niveles_IVIA = factor(matriz_indicadores$Niveles_IVIA,
+                                        labels = c("Bajo_IVIA","Medio bajo", "Medio",
+                                                   "Medio alto", "Alto"))
+```
+
+```{r}
+library(rio)
+
+fallecidos <- import("https://github.com/ChiaraZamoraM/TallerPolitai_mar22/raw/main/fallecidos_covid.csv")
+
+fallecidos$ubigeo_prov = substr(fallecidos$UBIGEO, 1, 4)
+
+fallecidosProv=aggregate(UUID~ubigeo_prov, data=fallecidos ,FUN=length)
+
+BaseFallecidosProv= merge(fallecidosProv, matriz_indicadores, by="ubigeo_prov")
+
+names(BaseFallecidosProv)
+```
+
+```{r}
+colnames(BaseFallecidosProv)[2] = "Conteo"
+
+BaseFallecidosProv$Tasa = BaseFallecidosProv$Conteo*10000/BaseFallecidosProv$Poblacion_2020
+```
+
+```{r}
+numSummary(BaseFallecidosProv$Tasa)
+```
+
+```{r}
+sum(BaseFallecidosProv$Conteo)*10000/sum(BaseFallecidosProv$Poblacion_2020)
+```
+
+
+---
+
+### **1. De una variable continua respecto a una categórica**
+
+```{r}
+BaseFallecidosProv %>%
+    ggplot(aes(Tasa)) +
+    geom_histogram(binwidth = 5, color = "black",fill = "grey") +
+    labs(title = "Tasa de fallecidos por la COVID-19 relativa al nivel de Desarrollo Humano",
+         x = "Tasa",
+         y = "Número de provincias") +
+    theme_minimal() +
+    facet_grid(Niveles_IDH~.)
+
+```
+
+```{r}
+table(BaseFallecidosProv$Niveles_IDH)
+```
+
+```{r}
+group_by(BaseFallecidosProv, Niveles_IDH, Niveles_IVIA)
+```
+
+```{r}
+library(pander)
+
+BaseFallecidosProv %>%
+    group_by(Niveles_IDH) %>%
+    summarize(mean_Tasa = mean(Tasa), sd_Tasa = sd(Tasa), median = median(Tasa)) %>%
+    pander
+```
+
+```{r}
+BaseFallecidosProv %>%
+    ggplot(aes(Niveles_IDH,Tasa)) +
+    geom_boxplot() +
+    labs(title = "Distribution of Tasa relative to Niveles_IDH",
+         x = "Niveles_IDH",
+         y = "Tasa") +
+    theme_minimal()  
+```
+
+---
+
+### **2. De una variable continua respecto a otra continua**
+
+```{r}
+BaseFallecidosProv %>%
+    ggplot(aes(Tasa, IDH)) +
+    geom_point() +
+    theme_minimal() +
+    labs(title = "Relationship between IDH and Tasa")
+```
+
+```{r}
+BaseFallecidosProv %>%
+    ggplot(aes(Tasa, IDH)) +
+    geom_point() +
+    theme_minimal() +
+    labs(title = "Relationship between IDH and Tasa") +
+    geom_smooth(method = "lm", se = F)
+```
+
+```{r}
+BaseFallecidosProv %>%
+    select(Tasa, IDH, IVIA) %>% 
+    cor %>% 
+    pander
+```
+
+```{r}
+BaseFallecidosProv %>% select_if(is.numeric) %>%
+    cor %>%
+    pander
+
+```
+
+```{r}
+library(ggcorrplot)
+
+
+BaseFallecidosProv %>%
+    select_if(is.numeric) %>%
+    cor %>% 
+    ggcorrplot()
+
+```
+
+```{r}
+BaseFallecidosProv %>%
+    select_if(is.numeric) %>%
+    cor %>% 
+    ggcorrplot(type = "lower", ggtheme = theme_minimal, colors = c("#6D9EC1","white","#E46726"),
+               show.diag = T,
+               lab = T, lab_size = 5,
+               title = "Correlation Matrix for the BaseFallecidosProv dataset",
+               legend.title = "Correlation Value",
+               outline.color = "white",
+               hc.order = T)
+```
+
+
+---
+
+### **3. De una variable categórica respecto a una categórica**
+
+```{r}
+BaseFallecidosProv %>%
+    ggplot(aes(Niveles_IVIA)) +
+    geom_bar() +
+    facet_grid(~Niveles_IDH) +
+    coord_flip()
+```
+
+
+```{r}
+BaseFallecidosProv %>%
+    ggplot(aes(Niveles_IDH)) +
+    geom_bar() +
+    facet_grid(~Niveles_IVIA)
+```
+
+
+```{r}
+BaseFallecidosProv %>%
+    ggplot(aes(Niveles_IDH)) +
+    geom_bar(aes(fill = Niveles_IVIA))
+```
+
+
+```{r}
+BaseFallecidosProv %>% 
+    ggplot(aes(Niveles_IVIA)) +
+    geom_bar(aes(fill = Niveles_IDH))
+```
+
+```{r}
+BaseFallecidosProv %>% 
+    ggplot(aes(Niveles_IVIA)) +
+    geom_bar(aes(fill = Niveles_IDH), position = "fill")
+```
+
+
+```{r}
+BaseFallecidosProv %>%
+    group_by(Niveles_IDH, Niveles_IVIA) %>%
+    summarize(frequency = n()) %>% 
+    pander
+```
+
+### **Actividad:**
+
+Grupo 1:
+* Generar 4 niveles a partir de la tasa de fallecidos en la tabla **BaseFallecidosProv**.
+* Hacer un gráfico de barras que cruce los niveles generados a partir de la tasa de fallecidos y niveles de IDH. 
+
+Grupo 2:
+* Cambiar de nombre a la variable que contiene el Índice de Densidad del Estado (columna 34 de la **matriz_indicadores**) e incorporarla a la tabla **BaseFallecidosProv**.
+* ¿Qué tipo de análisis bivariado corresponde hacer? De acuerdo a la elección, hacer un gráfico. 
+
+### **4. Comparaciones de medias**
+
+- Generar nueva variable a partir del Índice de Densidad del Estado
+
+```{r}
+colnames(matriz_indicadores_backup)[34] = "IDE"
+
+matriz_indicadores_backup$IDE= as.numeric(matriz_indicadores_backup$IDE)
+
+matriz_indicadores_backup$IDE= cut(matriz_indicadores_backup$IDE, breaks =2)
+```
+
+```{r}
+Base = merge(BaseFallecidosProv, matriz_indicadores_backup[c(34,49)], by= "ubigeo_prov")
+```
+
+* **Dos muestras independientes**
+
+- Paramétrica
+
+```{r}
+Base$IDE= factor(Base$IDE, labels = c("Bajo", "Alto"))
+
+levels(Base$IDE)
+```
+
+```{r}
+t.test(Tasa ~ IDE, alternative = "less", 
+       conf.level = .95, 
+       var.equal = TRUE, 
+       data = Base)
+```
+
+```{r}
+t.test(Tasa ~ IDE, alternative = "greater", 
+       conf.level = .95, 
+       var.equal = TRUE, 
+       data = Base)
+```
+
+```{r}
+t.test(Tasa ~ IDE, 
+       conf.level = .95, 
+       var.equal = TRUE, 
+       data = Base)
+```
+
+- No paramétrica
+
+Una alternativa no paramétrica a la prueba t de muestra independiente es la prueba de suma de rangos de Wilcoxon. Comprueba si la suma promedio de los rangos (y, por lo tanto, las medianas) de las dos muestras difieren significativamente entre sí.
+
+La prueba exacta de Wilcoxon Rank Sum es especialmente útil para muestras muy pequeñas.
+
+```{r}
+library(exactRankTests)
+wilcox.exact(Tasa ~ IDE, 
+             data = Base, 
+             exact = FALSE)
+```
+
+* **Más de dos muestras independientes**
+
+- Paramétrica
+
+La hipótesis nula es que las medias de la tasa de fallecidos por la COVID-19 no difieren entre grupos de provincias con diferentes niveles de IDH.
+
+Podemos calcular el ANOVA usando la función aov(), guardar la salida en un objeto de resultados y luego usar la función de resumen() para acceder a la salida.
+
+Además, queremos usar la función TukeyHSD para obtener todas las comparaciones por pares (intervalos de confianza ajustados y valores p de Tukey).
+
+```{r}
+modelo1 = aov(Tasa ~ Niveles_IDH, data=Base)
+```
+
+```{r}
+summary(Tasa ~ Niveles_IDH, data=Base)
+```
+
+```{r}
+TukeyHSD(modelo1, ordered = TRUE)
+```
+
+- No paramétrica
+
+La prueba H es una alternativa no paramétrica al análisis de varianza unidireccional (ANOVA). Es una extensión de la prueba de suma de rangos de Wilcoxon a múltiples muestras.
+
+```{r}
+kruskal.test(Tasa ~ Niveles_IDH, data = Base)
+```
+
+* **Chi cuadrado**
+
+H0: No existe asociación entre las variables a y b --> Independencia. 
+H1: Existe asociación entre las variables a y b --> Dependencia.
+
+1. Distribución de las frecuencias esperadas. 
+         Con lentes     Sin lentes
+Hombre    25            25
+
+Mujer     25            25
+
+          50%           50%
+          
+FRECUENCIAS OBSERVADAS 
+         Con lentes     Sin lentes
+Hombre    30            20
+
+Mujer     20            30
+
+          50%           50%
+2. 
+
+H0: No existe diferencias entre las medidas/ la suma promedio de los rangos de la variable a y de la variable b,
+H1: Sí existen. 
+
+
+```{r}
+table(Base$IDE, Base$Niveles_IVIA)
+```
+
+```{r}
+chisq.test(Base$IDE, Base$Niveles_IVIA, correct=FALSE)
+```
+
+```{r}
+PhiCoef <- function(x){
+    unname(sqrt(chisq.test(x)$statistic / sum(x)))
+}
+
+# Coeficiente V de Cramer
+V <- function(x) {
+    unname(sqrt(chisq.test(x)$statistic / (sum(x) * (min(dim(x)) - 1))))
+}
+
+PhiCoef(table(Base$IDE, Base$Niveles_IVIA))
+
+V(table(Base$IDE, Base$Niveles_IVIA))   
+```
+
