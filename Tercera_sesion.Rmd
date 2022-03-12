@@ -60,6 +60,10 @@ indicadores = as.data.frame(sapply(indicadores, as.numeric))
 
 ```{r}
 numSummary(indicadores)
+
+library(psych)
+
+describe(indicadores)
 ```
 
 ---
@@ -133,6 +137,10 @@ plot(density(indicadores$Pobreza_total),
 polygon(density(indicadores$Pobreza_total), col="red")
 ```
 
+---
+
+### **4. Correlación**
+
 ```{r}
 indicadores %>%
     select(Pobreza_total, Desnutricion_cronica) %>% 
@@ -158,27 +166,37 @@ cor.test(indicadores$Pobreza_total,indicadores$Desnutricion_cronica)
 ### **5. Regresión lineal simple**
 
 ```{r}
+
+#lm(y~ x)
 linearMod <- lm(Desnutricion_cronica ~ Pobreza_total, 
                 data = indicadores)  # build linear regression model on full data
 
 print(linearMod)
 ```
 
+Residuo--> Valor observado - Valor estimado 
+
 ```{r}
 summary(linearMod)
 ```
+1. Ver significancia global del modelo 
+2. Ver significancia de las variables 
+3. Ver coeficiente estimado --> cuánto cambia Y cuando X variable predictora cambia en una unidad. 
+4. Ver el R cuadrado, r cuadrado ajustado 
 
 * **p-value**: Comprobación de la significación estadística
 
-t−Statistic= (β−coefficient)/Std.Error
+t−Statistic= (βcoefficient)/Std.Error
 
 * **R-Cuadrado y Adj R-Cuadrado**
 
 * **AIC and BIC**
 
 ```{r}
-AIC(linearMod)  
-BIC(linearMod)
+AIC(linearMod)  #1235.215
+
+
+BIC(linearMod)  #1245.034
 ```
 
 
@@ -213,11 +231,11 @@ mod <- lm(Desnutricion_cronica ~ Pobreza_total,
 mean(mod$residuals)
 ```
 
-##### **Supuesto b**: Homocedasticidad de los residuos o varianza igual.
+##### **Supuesto b**: Homocedasticidad de los residuos o varianza constante.
 
 Las gráficas superior izquierda e inferior izquierda muestran cómo varían los residuos a medida que aumentan los valores ajustados. Lo que queremos es ver puntos aleatorios distribuidos a lo largo del plano.
 
-La homocedasticidad, es una característica de un modelo de regresión lineal que implica que los la varianza de los errores es constante. Este término, que es lo contrario de heterocedasticidad, se emplea para nombrar la propiedad de algunos modelos de regresión lineal en los que los errores de estimación son constantes a lo largo de las observaciones. Una varianza constante permite disponer de modelos más fiables.
+La homocedasticidad es una característica de un modelo de regresión lineal que implica que la varianza de los errores es constante. Este término, que es lo contrario de heterocedasticidad, se emplea para nombrar la propiedad de algunos modelos de regresión lineal en los que los errores de estimación son constantes a lo largo de las observaciones. Una varianza constante permite disponer de modelos más fiables.
 
 Los valores influyentes con casos en nuestra data que no siguen el patrón general del resto de casos. No todos los valores atípicos influyen en el análisis de regresión. Aunque nuestros datos tengan valores extremos, es posible que no sean influyentes para determinar una línea de regresión. Eso significa que los resultados no serían muy diferentes si los incluyéramos o los excluyéramos del análisis.
 
