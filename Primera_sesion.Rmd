@@ -380,7 +380,7 @@ p1 <- Base %>%
     drop_na() %>% 
     ggplot(aes(x = Tasa))
 
-p1 + geom_histogram(binwidth = 0.5, 
+p1 + geom_histogram(binwidth = 5, 
                    position = "identity",
                    alpha = 0.5) +
     xlab("Tasa")+
@@ -398,8 +398,30 @@ describe(Base[c(2,6,7)])
 ```
 
 
-### Actividad: 
+### **Actividad:** 
 
-* Reemplazar caracteres extraños en las variables "Departamento", "Provincia" y "Distrito" de la base **poblacion**.
+* Reemplazar caracteres extraños en las variables "Departamento", "Provincia" de la base **poblacion**.
 * Cambiar tipo y formato de variable de "FECHA_CORTE" de la base **fallecidos**.
+
 * Tabla que contenga la agregación de fallecidos por fecha.
+
+```{r}
+fallecidosfecha=aggregate(UUID ~ FECHA_FALLECIMIENTO , #Por qué UUID?
+                         data = fallecidos, 
+                         FUN=length)
+```
+
+```{r}
+library(ggplot2)
+
+p <- fallecidos %>% 
+    select(FECHA_FALLECIMIENTO) %>% 
+    drop_na() %>% 
+    ggplot(aes(x = FECHA_FALLECIMIENTO))
+
+p + geom_bar(fill = "darkblue") +
+    xlab("Fecha de fallecimiento") +
+    ylab("Frecuencia")
+```
+
+
